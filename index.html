@@ -1,5 +1,71 @@
-bnb-bot-panel/
-├─ public/
-│  └─ index.html          ← Panelin HTML, CSS ve JS dosyası
-├─ server.js              ← Node.js backend (API ve otomatik işlemler)
-├─ package.json           ← Node.js bağımlılıklarını belirtir
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>BNB Canlı & Sanal Bot Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body { font-family: Arial; margin: 20px; background:#f4f4f4; }
+  .panel { display:flex; gap:20px; flex-wrap:wrap; }
+  .box { background:#fff; padding:20px; border-radius:10px; flex:1; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+  #log { max-height:200px; overflow-y:auto; background:#eee; padding:10px; border-radius:5px; }
+  button { padding:10px 20px; margin-top:10px; cursor:pointer; }
+</style>
+</head>
+<body>
+<h1>BNB Canlı & Sanal Bot Panel</h1>
+
+<div class="panel">
+  <div class="box">
+    <h2>RSI6 Güncel</h2>
+    <div id="rsiValue" style="font-size:2em;">--</div>
+    <button onclick="manualBuy()">Canlı Alım</button>
+    <button onclick="manualSell()">Canlı Satış</button>
+  </div>
+  <div class="box">
+    <h2>Sanal Bakiye</h2>
+    <div id="balance">9 USDT</div>
+    <h3>Son İşlemler</h3>
+    <div id="log"></div>
+  </div>
+</div>
+
+<div class="box" style="margin-top:20px;">
+  <h2>RSI6 Trend Grafiği</h2>
+  <canvas id="rsiChart" height="100"></canvas>
+</div>
+
+<script>
+let rsiData = [], labels = [];
+let log = document.getElementById("log");
+
+function updatePanel(rsiHistory, balance){
+  rsiData = rsiHistory.map(d=>d.rsi);
+  labels = rsiHistory.map(d=>d.time);
+  chart.update();
+  document.getElementById("rsiValue").innerText = rsiData[rsiData.length-1].toFixed(1);
+  document.getElementById("balance").innerText = balance.toFixed(2) + " USDT";
+  log.innerHTML = `<div style="color:green;">📉 RSI${rsiData[rsiData.length-1].toFixed(1)} → Sanal Alım Yapıldı</div>` + log.innerHTML;
+}
+
+// Chart.js
+const ctx = document.getElementById('rsiChart').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: { labels, datasets: [{ label: 'RSI6', data: rsiData, borderColor: 'blue', fill: false }] },
+  options: { scales: { y: { min:0, max:100 } } }
+});
+
+// Canlı al-sat butonları
+function manualBuy(){ log.innerHTML = `<div style="color:blue;">💰 Canlı Alım Yapıldı</div>` + log.innerHTML; }
+function manualSell(){ log.innerHTML = `<div style="color:red;">💵 Canlı Satış Yapıldı</div>` + log.innerHTML; }
+
+// Paneli her 15 sn güncelle
+setInterval(async()=>{
+  const res = await fetch('/rsi');
+  const data = await res.json();
+  updatePanel(data.rsi, data.balance);
+},15000);
+</script>
+</body>
+</html>
